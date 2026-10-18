@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Análise dos dados do TSE sobre as seções eleitorais que mudaram de local de votação entre o 1º e o 2º turno de 2026.">
+<title>Seções Alteradas 2026</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap">
+<style>
+/* Layout: relatório de coluna única, números em primeiro plano, gráficos de barras simples. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #14212b;
+  --muted: #55656f;
+  --line: #d8dfe5;
+  --a: #0f766e;      /* Lula */
+  --a-soft: #d3ece8;
+  --b: #b45309;      /* Flávio */
+  --b-soft: #f4dfc9;
+  --accent: #2f4b7c;
+  --note-bg: #eaf0f7;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-head: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1920; --surface: #15232c; --ink: #e5ecf1; --muted: #98a9b5; --line: #25363f;
+    --a: #3fbfae; --a-soft: #17413d; --b: #e2a35a; --b-soft: #4a3418;
+    --accent: #8fb0e8; --note-bg: #182a3a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1920; --surface: #15232c; --ink: #e5ecf1; --muted: #98a9b5; --line: #25363f;
+  --a: #3fbfae; --a-soft: #17413d; --b: #e2a35a; --b-soft: #4a3418;
+  --accent: #8fb0e8; --note-bg: #182a3a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-family: var(--font-head); font-size: clamp(1.9rem, 5.2vw, 3rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; max-width: 24ch; }
+h2 { font-family: var(--font-head); font-size: 1.55rem; font-weight: 650; letter-spacing: -0.01em; padding-top: 14px; border-top: 2px solid var(--ink); }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-size: 0.85rem; color: var(--muted); }
+.eyebrow.fn { font-family: var(--font-body); }
+.lede { color: var(--ink); font-size: 1.15rem; line-height: 1.5; margin-top: 8px; max-width: 58ch; }
+.nav { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-top: 18px; }
+.nav a { text-decoration: none; color: var(--ink); font-size: 0.88rem; font-weight: 500; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 13px; }
+.nav a:hover { border-color: var(--accent); color: var(--accent); }
+section[id], h2[id] { scroll-margin-top: 16px; }
+header { display: flex; flex-direction: column; gap: 14px; padding-bottom: 8px; }
+.balance { height: 10px; display: flex; border-radius: 5px; overflow: hidden; max-width: 420px; }
+.balance i { display: block; height: 100%; }
+.balance .a { background: var(--a); } .balance .b { background: var(--b); }
+section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 22px; min-width: 0; }
+.note { border-left: 3px solid var(--line); padding: 2px 0 2px 14px; font-size: 0.92rem; color: var(--muted); max-width: 68ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.9rem; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.sw.a { background: var(--a); } .sw.b { background: var(--b); }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+/* resumo */
+.summary { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px 28px; }
+.summary li { border-left: 3px solid var(--accent); padding: 2px 0 2px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.summary li:nth-child(2) { border-left-color: var(--a); } .summary li:nth-child(4) { border-left-color: var(--b); }
+.summary .big { font-family: var(--font-head); font-size: 2.1rem; font-weight: 600; font-variant-numeric: lining-nums tabular-nums; line-height: 1.1; }
+.summary .what { color: var(--muted); font-size: 0.92rem; }
+
+/* barras */
+.bars { display: flex; flex-direction: column; gap: 14px; }
+.barrow { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; }
+.barrow .who { font-weight: 600; }
+.track { background: var(--line); height: 36px; border-radius: 4px; position: relative; overflow: hidden; }
+.fill { height: 100%; font-size: 0.9rem; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-family: var(--font-data); font-size: 0.85rem; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fill.a { background: var(--a); } .fill.b { background: var(--b); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fill { color: #0b1217; } }
+:root[data-theme="dark"] .fill { color: #0b1217; }
+
+/* simulador */
+.sim { display: flex; flex-direction: column; gap: 14px; }
+.sim label { font-weight: 600; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sim input[type=range] { width: 100%; accent-color: var(--accent); }
+.simgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.simcell { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.simcell .k { color: var(--muted); font-size: 0.85rem; }
+.simcell .v { font-family: var(--font-data); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.simcell.a { border-left: 4px solid var(--a); } .simcell.b { border-left: 4px solid var(--b); } .simcell.n { border-left: 4px solid var(--accent); }
+
+/* tabela */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 660px; font-size: 0.92rem; }
+th, td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; font-size: 0.8rem; color: var(--muted); letter-spacing: 0.03em; background: var(--surface); position: sticky; top: 0; }
+tbody tr:last-child td { border-bottom: 0; }
+td.small { color: var(--muted); }
+.dv { display: grid; grid-template-columns: 1fr 1fr; width: 150px; height: 14px; position: relative; margin-left: auto; }
+.dv i { display: block; height: 100%; }
+.dv .l { justify-self: end; background: var(--b); border-radius: 2px 0 0 2px; }
+.dv .r { justify-self: start; background: var(--a); border-radius: 0 2px 2px 0; }
+.dvcell { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+.dvnum { min-width: 4.2em; text-align: right; }
+.dv::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+.dim { opacity: 0.55; }
+.finder { display: flex; flex-direction: column; gap: 16px; }
+.fields { display: flex; flex-wrap: wrap; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 220px; min-width: 0; }
+.field.small { flex: 0 1 150px; }
+.field label { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.field select, .field input { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-width: 0; width: 100%; }
+.field select:disabled, .field input:disabled { opacity: 0.5; }
+.resgroup { border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.resgroup .route { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start; font-size: 0.92rem; }
+.resgroup .arrow { color: var(--muted); }
+.resgroup .lbl { display: block; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.resgroup .loc { overflow-wrap: anywhere; }
+.resgroup .meta { color: var(--muted); font-size: 0.88rem; overflow-wrap: anywhere; }
+.ressum { font-weight: 600; }
+@media (max-width: 560px) { .resgroup .route { grid-template-columns: 1fr; } .resgroup .arrow { display: none; } }
+table.narrow { min-width: 480px; }
+table.narrow td:nth-child(2), table.narrow th:nth-child(2) { text-align: left; }
+.concl { display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--accent); background: var(--note-bg); border-top-color: transparent; border-right-color: transparent; border-bottom-color: transparent; }
+.concl h3 { font-family: var(--font-head); font-size: 1.15rem; font-weight: 650; }
+.concl h3:not(:first-child) { margin-top: 10px; }
+.concl ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; max-width: 68ch; }
+
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 18px; }
+summary { cursor: pointer; font-weight: 600; }
+details p + p, details ul { margin-top: 10px; }
+details ul { padding-left: 1.2em; max-width: 68ch; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.contact { display: flex; flex-direction: column; gap: 14px; }
+.mailrow { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.btn { background: var(--accent); color: var(--surface); text-decoration: none; font-weight: 600; border-radius: 6px; padding: 11px 20px; }
+.btn:hover { filter: brightness(1.1); }
+.addr { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 0.92rem; min-width: 0; overflow-wrap: anywhere; }
+.copy { font: inherit; font-size: 0.85rem; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+.copy:hover { border-color: var(--accent); }
+footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) { .fill { transition: width 0.4s ease; } }
+@media (max-width: 480px) { .barrow { grid-template-columns: 1fr; gap: 4px; } .panel { padding: 16px; } }
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <span class="eyebrow">Eleição presidencial de 2026. Análise feita em 18/10/2026, antes do 2º turno de 25/10.</span>
+    <h1>Mudança de local de votação no 2º turno: o que os dados do TSE mostram</h1>
+    <p class="lede">Analisamos <span id="h-n">–</span> seções eleitorais que mudaram de local entre os dois turnos e comparamos o voto delas no 1º turno para Lula e Flávio Bolsonaro.</p>
+    <div class="balance" id="h-bal" role="img" aria-label="Proporção de votos de Lula e Flávio nas seções alteradas"></div>
+    <div class="legend" aria-hidden="true"><span><i class="sw a"></i> Lula, votos no 1º turno nessas seções</span><span><i class="sw b"></i> Flávio</span></div>
+    <nav class="nav" aria-label="Seções da página">
+      <a href="#resumo">Resumo</a><a href="#concl">Conclusão</a><a href="#busca">Consulte o seu município</a><a href="#votos">Votos</a><a href="#sim">Simulação</a><a href="#mun">Por município</a><a href="#limites">Método</a><a href="#contato">Contato</a>
+    </nav>
+  </header>
+
+  <section aria-labelledby="resumo">
+    <h2 id="resumo">Resumo</h2>
+    <ul class="summary" id="summary"></ul>
+    <p class="note">Esta análise olha só para o perfil de voto dessas seções. Ela não diz nada sobre o motivo das mudanças, que variam de um lugar para outro (obras, chuvas, acessibilidade, entre outros).</p>
+  </section>
+
+  <section aria-labelledby="concl">
+    <h2 id="concl">Conclusão</h2>
+    <div class="panel concl">
+      <h3>O que os dados permitem dizer</h3>
+      <ul id="concl-ok"></ul>
+      <h3>O que eles não permitem dizer</h3>
+      <ul id="concl-no"></ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="busca">
+    <h2 id="busca">Consulte o seu município</h2>
+    <p>Escolha o estado e o município para ver quais seções mudaram de local entre o 1º e o 2º turno. Se souber o número da sua seção, digite para filtrar.</p>
+    <div class="panel finder">
+      <div class="fields">
+        <div class="field"><label for="f-uf">Estado</label><select id="f-uf" disabled><option value="">Carregando…</option></select></div>
+        <div class="field"><label for="f-mun">Município</label><select id="f-mun" disabled><option value="">Selecione o estado primeiro</option></select></div>
+        <div class="field small"><label for="f-sec">Seção (opcional)</label><input id="f-sec" type="text" inputmode="numeric" maxlength="4" placeholder="ex.: 21" disabled></div>
+      </div>
+      <div id="f-out" aria-live="polite"></div>
+    </div>
+    <p class="note">A consulta é por município. O arquivo do TSE não traz CEP, por isso não dá para buscar por ele. Se o seu município não aparecer, isso não garante que o seu local não mudou: o arquivo só inclui mudanças feitas entre o 1º e o 2º turno. Confira sempre no e-Título ou no site do seu TRE.</p>
+  </section>
+
+  <section aria-labelledby="votos">
+    <h2 id="votos">Quem tem mais votos nessas seções</h2>
+    <p>Votos para presidente no 1º turno, somando as seções alteradas.</p>
+    <div class="panel">
+      <div class="bars" id="bars" role="img" aria-label="Votos de Lula e Flávio nas seções alteradas"></div>
+    </div>
+    <p id="votos-txt"></p>
+  </section>
+
+  <section aria-labelledby="sim">
+    <h2 id="sim">E se parte desses eleitores não votasse?</h2>
+    <p>Hipótese de cálculo: a mesma fração de eleitores deixa de votar nas seções alteradas, igual para os dois lados. Mova o controle para ver o efeito.</p>
+    <div class="panel sim">
+      <label for="p"><span>Eleitores que deixam de votar</span><span class="num" id="pval">10%</span></label>
+      <input type="range" id="p" min="0" max="30" step="1" value="10">
+      <div class="simgrid">
+        <div class="simcell a"><span class="k">Lula perde</span><span class="v" id="sl">–</span></div>
+        <div class="simcell b"><span class="k">Flávio perde</span><span class="v" id="sf">–</span></div>
+        <div class="simcell n"><span class="k">Diferença líquida</span><span class="v" id="sd">–</span></div>
+      </div>
+      <p id="sim-txt"></p>
+    </div>
+  </section>
+
+  <section aria-labelledby="mun">
+    <h2 id="mun">Dentro do mesmo município</h2>
+    <p>Para tirar o efeito da geografia, cada seção alterada foi comparada com as demais seções do seu município.</p>
+    <div class="panel"><p id="mun-txt"></p></div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="sw a"></i> alteradas mais favoráveis a Lula</span>
+      <span><i class="sw b"></i> alteradas mais favoráveis a Flávio</span>
+    </div>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Tabela por UF">
+      <table>
+        <thead><tr>
+          <th>UF</th><th>Seções</th><th>Lula nas alteradas</th><th>Lula no resto</th><th>Flávio nas alteradas</th><th>Flávio no resto</th><th>Diferença de margem (p.p.)</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="eyebrow" style="max-width:68ch">Diferença de margem = (Lula − Flávio) nas seções alteradas menos (Lula − Flávio) nas demais do mesmo município, em pontos percentuais do total de votos. Valores sombreados têm menos de 20 seções.</p>
+  </section>
+
+  <section aria-labelledby="abst">
+    <h2 id="abst">Essas seções já tinham mais abstenção?</h2>
+    <p>Se os eleitores dessas seções já faltavam mais no 1º turno, a mudança de local teria mais chance de pesar. Comparei a abstenção do 1º turno nas seções alteradas com a das demais do mesmo município.</p>
+    <div class="panel"><p id="abst-txt"></p></div>
+  </section>
+
+  <section aria-labelledby="conc">
+    <h2 id="conc">Onde as mudanças se concentram</h2>
+    <p id="conc-txt"></p>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Municípios com mais seções alteradas">
+      <table class="narrow">
+        <thead><tr><th>Município</th><th>UF</th><th>Seções alteradas</th><th>Eleitores aptos</th></tr></thead>
+        <tbody id="tbody-top"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="limites">
+    <h2 id="limites">Limites e método</h2>
+    <details>
+      <summary>O que esta análise não mostra</summary>
+      <ul>
+        <li>Quantas pessoas realmente erraram o local. Isso só aparece na abstenção do 2º turno, comparando essas seções com as demais.</li>
+        <li>Se o comportamento no 2º turno será igual ao do 1º. Votos de outros candidatos migram e a abstenção pode variar.</li>
+        <li>Se algum grupo faltaria mais (idosos, quem depende de transporte). O cálculo supõe efeito igual.</li>
+        <li>A motivação das mudanças.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Como foi calculado</summary>
+      <p>Os dois conjuntos de dados são oficiais, publicados pelo TSE, e foram obtidos direto do site do TSE em 18/10/2026: a votação por seção do 1º turno e o arquivo das seções alteradas. As seções alteradas vêm de um arquivo com as <em>seções alteradas apenas no 2º turno</em>, que traz <span class="num" id="m-n">–</span> seções. Cada uma foi cruzada com a votação para presidente no 1º turno por UF, município, zona e seção. <span class="num" id="m-sem">–</span> seções não tiveram correspondência (1 em Aracati e 9 no exterior, provavelmente por renumeração ou agregação) e ficaram de fora.</p>
+      <p>A comparação dentro do município usa só municípios que têm seções alteradas e não alteradas. A diferença média é ponderada pelos votos das seções alteradas, e o intervalo de confiança vem de 2.000 reamostragens dos municípios.</p>
+      <p>Um teste de sorteio de seções dentro de cada município aponta uma diferença de cerca de 4.900 votos no saldo Lula − Flávio (p = 0,002). Ele trata seções do mesmo município como intercambiáveis, o que exagera a significância, então o intervalo por município é a leitura mais prudente.</p>
+      <p>O número de 4.352 seções divulgado na imprensa não é o mesmo conjunto do arquivo usado aqui (2.033). Ele provavelmente se refere a todas as seções que tiveram o local alterado nesta eleição, incluindo as que já tinham mudado desde o 1º turno. O arquivo usado nesta página traz só as que mudaram entre o 1º e o 2º turno. Essa explicação é uma interpretação, e não foi confirmada com o TSE.</p>
+    </details>
+  </section>
+
+  <section aria-labelledby="contato">
+    <h2 id="contato">Críticas, sugestões ou correções</h2>
+    <div class="panel contact">
+      <p>Encontrou um erro, tem uma crítica ou uma ideia para melhorar a análise? Escreva para mim. Se for um erro de dado, diga o município, a seção e o que você viu, para eu conferir.</p>
+      <div class="mailrow">
+        <a class="btn" id="mail" href="mailto:flavio.correialima@gmail.com?subject=An%C3%A1lise%20das%20se%C3%A7%C3%B5es%20alteradas%20-%20contato">Enviar e-mail</a>
+        <span class="addr"><span class="num" id="addr">flavio.correialima@gmail.com</span> <button type="button" class="copy" id="copy">Copiar endereço</button></span>
+      </div>
+      <p class="note" id="copied" aria-live="polite" hidden>Endereço copiado.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Fonte dos votos: dado oficial do TSE, votação por seção, presidente, 1º turno de 2026 (eleição de 4/10/2026; última atualização no site do TSE em 6/10/2026). Fonte das seções: arquivo oficial do TSE com as seções alteradas para o 2º turno. Ambos obtidos no site do TSE em 18/10/2026.</span>
+    <span>Cálculos refeitos por programa a partir dos arquivos originais. Os números podem mudar se o TSE corrigir os dados.</span>
+  </footer>
+</main>
+
+<script>
+const DATA = {"nat":{"secoes_total_arquivo":2033,"secoes_encontradas":2023,"secoes_sem_correspondencia":10,"aptos_alt":604469,"comp_alt":79.1,"lula_alt":223462,"flavio_alt":202052,"total_alt":478162,"lula_nac":53879538,"flavio_nac":56104503,"pct_lula_alt":46.7,"pct_flavio_alt":42.3,"pct_lula_resto":43.0,"pct_flavio_resto":44.8,"sec_lula_vence":1036,"sec_flavio_vence":978,"sec_empate":9,"municipios_comparaveis":315,"dif_pond_pp":-1.18,"mun_dif_neg":169,"mun_dif_pos":146,"ic_lo":-2.64,"ic_hi":0.14},"ufs":[{"uf":"MG","n":264,"l_alt":36.4,"f_alt":50.7,"l_rest":41.1,"f_rest":45.7,"mun":44,"dif":-0.6},{"uf":"PR","n":253,"l_alt":31.7,"f_alt":57.1,"l_rest":30.0,"f_rest":57.7,"mun":48,"dif":-2.4},{"uf":"MA","n":194,"l_alt":56.3,"f_alt":34.7,"l_rest":61.7,"f_rest":29.7,"mun":27,"dif":-8.1},{"uf":"PE","n":151,"l_alt":62.2,"f_alt":27.7,"l_rest":60.1,"f_rest":29.4,"mun":24,"dif":-1.4},{"uf":"SP","n":146,"l_alt":34.0,"f_alt":51.9,"l_rest":36.0,"f_rest":48.9,"mun":8,"dif":0.9},{"uf":"BA","n":127,"l_alt":60.6,"f_alt":29.1,"l_rest":62.6,"f_rest":27.0,"mun":25,"dif":-4.1},{"uf":"PI","n":120,"l_alt":74.4,"f_alt":18.0,"l_rest":67.9,"f_rest":23.1,"mun":28,"dif":1.7},{"uf":"AP","n":117,"l_alt":41.4,"f_alt":47.5,"l_rest":44.8,"f_rest":44.3,"mun":5,"dif":-2.5},{"uf":"PB","n":106,"l_alt":59.4,"f_alt":29.8,"l_rest":57.4,"f_rest":31.0,"mun":17,"dif":0.1},{"uf":"GO","n":86,"l_alt":28.2,"f_alt":55.2,"l_rest":29.9,"f_rest":51.6,"mun":11,"dif":1.7},{"uf":"AL","n":75,"l_alt":62.6,"f_alt":27.8,"l_rest":51.2,"f_rest":38.1,"mun":9,"dif":-0.5},{"uf":"SE","n":70,"l_alt":59.1,"f_alt":30.1,"l_rest":59.5,"f_rest":29.0,"mun":8,"dif":-2.3},{"uf":"RR","n":60,"l_alt":22.2,"f_alt":69.9,"l_rest":22.4,"f_rest":69.5,"mun":6,"dif":1.2},{"uf":"AM","n":48,"l_alt":43.1,"f_alt":46.8,"l_rest":46.9,"f_rest":43.7,"mun":2,"dif":3.4},{"uf":"TO","n":37,"l_alt":46.1,"f_alt":45.5,"l_rest":41.8,"f_rest":48.6,"mun":13,"dif":8.5},{"uf":"PA","n":31,"l_alt":45.0,"f_alt":46.1,"l_rest":47.9,"f_rest":42.7,"mun":6,"dif":-1.4},{"uf":"RS","n":31,"l_alt":38.3,"f_alt":49.5,"l_rest":34.2,"f_rest":53.3,"mun":9,"dif":7.2},{"uf":"RN","n":24,"l_alt":64.0,"f_alt":26.4,"l_rest":57.0,"f_rest":33.2,"mun":6,"dif":-5.0},{"uf":"ES","n":20,"l_alt":29.5,"f_alt":60.2,"l_rest":36.1,"f_rest":52.4,"mun":4,"dif":0.4},{"uf":"RJ","n":19,"l_alt":33.8,"f_alt":53.5,"l_rest":37.5,"f_rest":50.4,"mun":2,"dif":-0.6},{"uf":"AC","n":13,"l_alt":30.1,"f_alt":58.8,"l_rest":27.6,"f_rest":62.0,"mun":4,"dif":8.8},{"uf":"RO","n":11,"l_alt":30.5,"f_alt":57.8,"l_rest":25.3,"f_rest":65.9,"mun":2,"dif":0.7},{"uf":"CE","n":9,"l_alt":57.4,"f_alt":32.8,"l_rest":60.2,"f_rest":29.7,"mun":4,"dif":-2.7},{"uf":"ZZ","n":9,"l_alt":70.0,"f_alt":19.4,"l_rest":45.8,"f_rest":42.3,"mun":1,"dif":15.9},{"uf":"MS","n":1,"l_alt":46.4,"f_alt":46.4,"l_rest":33.5,"f_rest":56.7,"mun":1,"dif":47.1},{"uf":"SC","n":1,"l_alt":20.7,"f_alt":67.2,"l_rest":24.2,"f_rest":64.5,"mun":1,"dif":5.8}]};
+const N = DATA.nat;
+const fmt = (n) => Math.round(n).toLocaleString('pt-BR');
+const pc = (n, d = 1) => n.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const sgn = (n, d = 1) => (n > 0 ? '+' : n < 0 ? '−' : '') + pc(Math.abs(n), d);
+const diff = N.lula_alt - N.flavio_alt;
+const gap = N.flavio_nac - N.lula_nac;
+
+// Resumo
+document.getElementById('summary').innerHTML = [
+  [fmt(N.secoes_encontradas), 'seções alteradas com votação conhecida, com ' + fmt(N.aptos_alt) + ' eleitores aptos'],
+  ['+' + fmt(diff), 'votos de vantagem de Lula nessas seções (' + fmt(N.lula_alt) + ' contra ' + fmt(N.flavio_alt) + ')'],
+  [pc(diff / gap * 100, 1).replace('.', ',') + '%', 'é o tamanho dessa vantagem diante dos ' + fmt(gap) + ' votos que Flávio teve a mais que Lula no país'],
+  [sgn(N.dif_pond_pp) + ' p.p.', 'diferença de margem de Lula dentro do mesmo município (intervalo de ' + sgn(N.ic_lo) + ' a ' + sgn(N.ic_hi) + ')']
+].map(([b, w]) => '<li><span class="big">' + b + '</span><span class="what">' + w + '</span></li>').join('');
+
+// Barras
+const max = Math.max(N.lula_alt, N.flavio_alt);
+const row = (name, v, cls, pct) => '<div class="barrow"><span class="who">' + name + '</span><div class="track"><div class="fill ' + cls + '" style="width:' + (v / max * 100).toFixed(1) + '%">' + fmt(v) + ' · ' + pc(pct) + '%</div></div></div>';
+document.getElementById('bars').innerHTML = row('Lula', N.lula_alt, 'a', N.pct_lula_alt) + row('Flávio', N.flavio_alt, 'b', N.pct_flavio_alt);
+document.getElementById('votos-txt').textContent =
+  'Lula foi o mais votado em ' + fmt(N.sec_lula_vence) + ' das ' + fmt(N.secoes_encontradas) + ' seções e Flávio em ' + fmt(N.sec_flavio_vence) + ' (' + N.sec_empate + ' empates). Nas demais seções do país, Lula teve ' + pc(N.pct_lula_resto) + '% e Flávio ' + pc(N.pct_flavio_resto) + '%. Parte dessa diferença vem de onde as mudanças aconteceram: muitas estão em estados em que Lula vai bem, como Maranhão, Piauí, Pernambuco e Bahia.';
+
+// Simulador
+const p = document.getElementById('p');
+function sim() {
+  const f = Number(p.value) / 100;
+  const l = N.lula_alt * f, fl = N.flavio_alt * f, d = l - fl;
+  document.getElementById('pval').textContent = p.value + '%';
+  document.getElementById('sl').textContent = '−' + fmt(l);
+  document.getElementById('sf').textContent = '−' + fmt(fl);
+  document.getElementById('sd').textContent = fmt(d);
+  document.getElementById('sim-txt').textContent = f === 0 ? 'Sem abstenção adicional, nada muda.' :
+    'Lula perderia ' + fmt(d) + ' votos a mais que Flávio, o equivalente a ' + pc(d / gap * 100, 2) + '% da vantagem que Flávio teve no 1º turno em todo o país (' + fmt(gap) + ' votos).';
+}
+p.addEventListener('input', sim); sim();
+
+// Município
+document.getElementById('mun-txt').innerHTML =
+  'Em <strong>' + N.municipios_comparaveis + ' municípios</strong>, as seções alteradas deram a Lula uma margem em média <strong>' + pc(Math.abs(N.dif_pond_pp)) + ' ponto percentual menor</strong> que o resto do município (intervalo de 95%: ' + sgn(N.ic_lo) + ' a ' + sgn(N.ic_hi) + '). Como o intervalo chega a zero, a diferença é pequena e não se distingue de ruído. Em ' + N.mun_dif_neg + ' municípios a margem de Lula foi menor nas alteradas e em ' + N.mun_dif_pos + ' foi maior.';
+
+const tb = document.getElementById('tbody');
+tb.innerHTML = DATA.ufs.map(u => {
+  const small = u.n < 20;
+  const d = u.dif;
+  let cell = '<span class="small">–</span>';
+  if (d !== null) {
+    const w = Math.min(Math.abs(d), 10) / 10 * 50;
+    const bar = d < 0 ? '<i class="l" style="width:' + w + '%"></i><i class="r"></i>' : '<i class="l"></i><i class="r" style="width:' + w + '%"></i>';
+    cell = '<span class="dvcell"><span class="dv" aria-hidden="true">' + bar + '</span><span class="num dvnum">' + sgn(d) + '</span></span>';
+  }
+  const nome = u.uf === 'ZZ' ? 'Exterior' : u.uf;
+  return '<tr' + (small ? ' class="dim"' : '') + '><td><strong>' + nome + '</strong></td><td class="num">' + fmt(u.n) + '</td><td class="num">' + pc(u.l_alt) + '%</td><td class="num small">' + pc(u.l_rest) + '%</td><td class="num">' + pc(u.f_alt) + '%</td><td class="num small">' + pc(u.f_rest) + '%</td><td>' + cell + '</td></tr>';
+}).join('');
+
+const X = {"abst_alt":20.9,"abst_resto":21.1,"abst_mun":315,"abst_dif":0.34,"abst_ic":[-0.04,0.72],"abst_mais":167,"abst_menos":148,"n_municipios":316,"share_top1":4.2,"share_top5":13.3,"share_top10":21.0,"share_top20":31.1,"top":[{"uf":"AP","mun":"Macapá","secoes":84,"aptos":25132},{"uf":"MG","mun":"Itaúna","secoes":67,"aptos":21848},{"uf":"AM","mun":"Manaus","secoes":43,"aptos":14919},{"uf":"MA","mun":"Bacabal","secoes":40,"aptos":11775},{"uf":"BA","mun":"Jequié","secoes":35,"aptos":11032},{"uf":"RR","mun":"Boa Vista","secoes":32,"aptos":7954},{"uf":"SP","mun":"São Paulo","secoes":32,"aptos":9359},{"uf":"PR","mun":"União da Vitória","secoes":31,"aptos":9454},{"uf":"SP","mun":"Limeira","secoes":31,"aptos":8672},{"uf":"PI","mun":"Regeneração","secoes":29,"aptos":6697}],"n_locais":541,"locais_inteiros":441,"locais_parciais":100,"secoes_em_locais_inteiros":1745,"sec_por_local_med":3.0,"sec_por_local_max":20};
+
+// Consulta por município
+let ROWS = [];
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fUf = document.getElementById('f-uf'), fMun = document.getElementById('f-mun'), fSec = document.getElementById('f-sec'), fOut = document.getElementById('f-out');
+fetch('rows.json').then(r => r.json()).then(RT => {
+  ROWS = [];
+  RT.g.forEach(x => String(x[5]).split(',').forEach((s, k) => ROWS.push([x[0], RT.s[x[1]], x[2], Number(s), RT.s[x[3]], RT.s[x[4]], k === 0 ? x[6] : 0])));
+  const ufs = [...new Set(ROWS.map(r => r[0]))].sort((a, b) => a === 'Exterior' ? 1 : b === 'Exterior' ? -1 : a.localeCompare(b));
+  fUf.innerHTML = '<option value="">Selecione</option>' + ufs.map(u => '<option value="' + u + '">' + u + '</option>').join('');
+  fUf.disabled = false;
+}).catch(() => { fOut.innerHTML = '<p class="ressum">Não foi possível carregar a consulta. Recarregue a página.</p>'; });
+fUf.addEventListener('change', () => {
+  const uf = fUf.value;
+  const muns = [...new Set(ROWS.filter(r => r[0] === uf).map(r => r[1]))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  fMun.innerHTML = '<option value="">' + (uf ? 'Selecione o município' : 'Selecione o estado primeiro') + '</option>' + muns.map(m => '<option value="' + esc(m) + '">' + esc(m) + '</option>').join('');
+  fMun.disabled = !uf; fSec.disabled = true; fSec.value = '';
+  fOut.innerHTML = '';
+});
+fMun.addEventListener('change', () => { fSec.disabled = !fMun.value; fSec.value = ''; render(); });
+fSec.addEventListener('input', render);
+function render() {
+  const uf = fUf.value, mun = fMun.value;
+  if (!uf || !mun) { fOut.innerHTML = ''; return; }
+  const q = fSec.value.trim();
+  let rows = ROWS.filter(r => r[0] === uf && r[1] === mun);
+  const total = rows.length;
+  if (q) rows = rows.filter(r => String(r[3]) === q);
+  if (!rows.length) {
+    fOut.innerHTML = q
+      ? '<p class="ressum">A seção ' + esc(q) + ' não aparece entre as alteradas em ' + esc(mun) + '.</p><p class="meta" style="color:var(--muted)">Ela pode ter mudado antes do 1º turno. Confira no e-Título.</p>'
+      : '<p class="ressum">Nenhuma seção de ' + esc(mun) + ' aparece no arquivo de alterações do 2º turno.</p><p class="meta" style="color:var(--muted)">Confira o seu local no e-Título.</p>';
+    return;
+  }
+  const groups = new Map();
+  rows.forEach(r => { const k = r[2] + '|' + r[4] + '|' + r[5]; if (!groups.has(k)) groups.set(k, { zona: r[2], de: r[4], para: r[5], secs: [], el: 0 }); const g = groups.get(k); g.secs.push(r[3]); g.el += r[6]; });
+  const list = [...groups.values()].sort((a, b) => a.zona - b.zona || a.de.localeCompare(b.de));
+  const head = q ? '1 seção encontrada' : fmt(total) + (total === 1 ? ' seção alterada' : ' seções alteradas') + ' em ' + list.length + (list.length === 1 ? ' local' : ' locais') + ' de origem';
+  fOut.innerHTML = '<p class="ressum">' + head + ' em ' + esc(mun) + '</p>' + list.map(g =>
+    '<div class="resgroup"><div class="route"><div><span class="lbl">Local anterior</span><span class="loc">' + esc(g.de) + '</span></div><span class="arrow" aria-hidden="true">→</span><div><span class="lbl">Novo local</span><span class="loc">' + esc(g.para) + '</span></div></div>' +
+    '<span class="meta">Zona ' + g.zona + ' · Seções ' + g.secs.join(', ') + (q ? '' : ' · ' + fmt(g.el) + ' eleitores') + '</span></div>').join('');
+}
+
+// Abstenção
+document.getElementById('abst-txt').innerHTML =
+  'No 1º turno, a abstenção nas seções alteradas foi de <strong>' + pc(X.abst_alt) + '%</strong>, contra <strong>' + pc(X.abst_resto) + '%</strong> nas demais seções do país. Dentro do mesmo município, a diferença média é de <strong>' + sgn(X.abst_dif, 2) + ' ponto percentual</strong> (intervalo de 95%: ' + sgn(X.abst_ic[0], 2) + ' a ' + sgn(X.abst_ic[1], 2) + '), em ' + X.abst_mun + ' municípios. Em ' + X.abst_mais + ' deles as seções alteradas tinham mais abstenção e em ' + X.abst_menos + ' tinham menos. Ou seja, elas não eram mais frágeis que as vizinhas.';
+
+// Concentração
+document.getElementById('conc-txt').textContent =
+  'As ' + fmt(N.secoes_encontradas) + ' seções estão em ' + X.n_municipios + ' municípios. Os 10 municípios com mais seções reúnem ' + pc(X.share_top10) + '% do total e os 20 primeiros, ' + pc(X.share_top20) + '%. Por local de votação: ' + X.n_locais + ' locais de origem, dos quais ' + X.locais_inteiros + ' mudaram por inteiro (' + fmt(X.secoes_em_locais_inteiros) + ' seções) e ' + X.locais_parciais + ' mudaram só em parte. A mediana é de ' + fmt(X.sec_por_local_med) + ' seções por local.';
+document.getElementById('tbody-top').innerHTML = X.top.map(t => '<tr><td><strong>' + t.mun + '</strong></td><td>' + t.uf + '</td><td class="num">' + fmt(t.secoes) + '</td><td class="num">' + fmt(t.aptos) + '</td></tr>').join('');
+
+// Conclusão
+const l10 = N.lula_alt * 0.10 - N.flavio_alt * 0.10;
+document.getElementById('concl-ok').innerHTML = [
+  'Nessas seções, Lula teve mais votos que Flávio no 1º turno (' + fmt(N.lula_alt) + ' contra ' + fmt(N.flavio_alt) + '). Se uma parte desses eleitores deixasse de votar, Lula perderia um pouco mais em votos absolutos: cerca de ' + fmt(l10) + ' votos a mais que Flávio para cada 10% de abstenção extra.',
+  'Esse efeito é pequeno. Equivale a ' + pc(l10 / gap * 100, 2) + '% da diferença que Flávio teve no 1º turno, e não altera o quadro nacional.',
+  'Boa parte desse resultado vem de onde as mudanças aconteceram, em estados onde Lula vai bem. Dentro do mesmo município, a tendência se inverte levemente: as seções alteradas deram a Lula uma margem ' + pc(Math.abs(N.dif_pond_pp)) + ' ponto percentual menor, e esse valor não se distingue de ruído.',
+  'Não há sinal de que as mudanças atinjam um perfil de eleitor mais propenso a faltar (abstenção igual). As mudanças estão espalhadas por 316 municípios, e o maior deles responde por ' + pc(X.share_top1) + '% das seções.'
+].map(t => '<li>' + t + '</li>').join('');
+document.getElementById('concl-no').innerHTML = [
+  'O motivo das mudanças. Cada local tem a sua razão (obras, chuvas, acessibilidade, entre outras) e estes dados não mostram a causa.',
+  'Que uma candidatura tenha sido favorecida ou prejudicada de propósito. A análise mede quem seria afetado, e não a intenção.',
+  'Quantas pessoas de fato erraram o local. Isso só dá para medir com a abstenção do 2º turno.'
+].map(t => '<li>' + t + '</li>').join('');
+
+document.getElementById('h-n').textContent = fmt(N.secoes_encontradas);
+const tot = N.lula_alt + N.flavio_alt;
+document.getElementById('h-bal').innerHTML = '<i class="a" style="width:' + (N.lula_alt/tot*100).toFixed(1) + '%"></i><i class="b" style="width:' + (N.flavio_alt/tot*100).toFixed(1) + '%"></i>';
+document.getElementById('m-n').textContent = fmt(N.secoes_total_arquivo);
+document.getElementById('m-sem').textContent = fmt(N.secoes_sem_correspondencia);
+
+document.getElementById('copy').addEventListener('click', () => {
+  const ok = () => { document.getElementById('copied').hidden = false; };
+  const sel = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById('addr')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+  try { navigator.clipboard.writeText('flavio.correialima@gmail.com').then(ok, sel); } catch (e) { sel(); }
+});
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+</body>
+</html>
